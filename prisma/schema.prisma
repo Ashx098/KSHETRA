@@ -1,0 +1,351 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Rank {
+  E
+  D
+  C
+  B
+  A
+  S
+}
+
+enum GoalType {
+  fitness
+  learning
+  career
+  relationship
+  spiritual
+  project
+}
+
+enum AttributeCode {
+  strength
+  wisdom
+  focus
+  mastery
+  wealth
+  bond
+}
+
+enum StreakStatus {
+  inactive
+  active
+  broken
+}
+
+enum QuestType {
+  daily
+  weekly
+  event
+}
+
+enum QuestStatus {
+  active
+  completed
+  expired
+  cancelled
+}
+
+enum QuestCategory {
+  daily
+  weekly
+  event
+  dungeon_objective
+  raid_objective
+}
+
+enum QuestDifficulty {
+  low
+  medium
+  high
+}
+
+enum QuestAssignment {
+  mandatory
+  optional
+  stretch
+}
+
+enum QuestGeneratedBy {
+  system
+  ai
+  template
+}
+
+enum QuestLogIntensity {
+  low
+  medium
+  high
+}
+
+enum XpLedgerSource {
+  quest_completion
+  streak_milestone_bonus
+}
+
+enum AiGenerationType {
+  daily_quest_plan
+}
+
+enum AiGenerationStatus {
+  accepted
+  rejected
+  fallback_used
+  failed
+}
+
+model User {
+  id          String          @id @default(uuid()) @db.Uuid
+  email       String          @unique
+  username    String          @unique
+  displayName String          @map("display_name")
+  timezone    String          @default("Asia/Kolkata")
+  isActive    Boolean         @default(true) @map("is_active")
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  profile     UserProfile?
+  goals       UserGoal[]
+  attributes  UserAttribute[]
+  streak      Streak?
+  quests      Quest[]
+  questLogs   QuestLog[]
+  xpLedger    XpLedger[]
+  attributeHistory UserAttributeHistory[]
+  validDays   ValidDay[]
+  aiGenerations AiGeneration[]
+
+  @@map("users")
+}
+
+model UserProfile {
+  userId             String   @id @map("user_id") @db.Uuid
+  systemName         String   @default("Kshetra") @map("system_name")
+  currentRank        Rank     @default(E) @map("current_rank")
+  currentLevel       Int      @default(0) @map("current_level")
+  totalXp            Int      @default(0) @map("total_xp")
+  fatigueScore       Decimal  @default(0.0) @map("fatigue_score") @db.Decimal(5, 2)
+  motivationMode     String?  @map("motivation_mode")
+  onboardingComplete Boolean  @default(false) @map("onboarding_complete")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model UserGoal {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  goalType       GoalType  @map("goal_type")
+  title          String
+  description    String?
+  priorityWeight Decimal   @default(1.0) @map("priority_weight") @db.Decimal(5, 2)
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_goals")
+}
+
+model Attribute {
+  code        AttributeCode  @id
+  displayName String         @map("display_name")
+  description String
+  userStates  UserAttribute[]
+  questTemplates QuestTemplate[]
+  questAttributeMaps QuestAttributeMap[]
+  attributeHistory UserAttributeHistory[]
+
+  @@map("attributes")
+}
+
+model UserAttribute {
+  userId        String        @map("user_id") @db.Uuid
+  attributeCode AttributeCode @map("attribute_code")
+  value         Decimal       @default(0) @db.Decimal(6, 2)
+  cap           Decimal       @default(30) @db.Decimal(6, 2)
+  growthRate    Decimal       @default(1.0) @map("growth_rate") @db.Decimal(6, 3)
+  lastUpdatedAt DateTime      @default(now()) @map("last_updated_at") @db.Timestamptz(6)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attribute     Attribute     @relation(fields: [attributeCode], references: [code])
+  history       UserAttributeHistory[]
+
+  @@id([userId, attributeCode])
+  @@map("user_attributes")
+}
+
+model Streak {
+  userId            String       @id @map("user_id") @db.Uuid
+  currentStreakDays Int          @default(0) @map("current_streak_days")
+  longestStreakDays Int          @default(0) @map("longest_streak_days")
+  lastValidDay      DateTime?    @map("last_valid_day") @db.Date
+  streakStatus      StreakStatus @default(inactive) @map("streak_status")
+  updatedAt         DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("streaks")
+}
+
+model QuestTemplate {
+  id                   String           @id @default(uuid()) @db.Uuid
+  code                 String           @unique
+  title                String
+  description          String
+  questCategory        QuestCategory    @map("quest_category")
+  questType            QuestType        @map("quest_type")
+  assignmentKind       QuestAssignment  @map("assignment_kind")
+  difficulty           QuestDifficulty
+  rewardXpBase         Int              @map("reward_xp_base")
+  defaultAttributeCode AttributeCode?   @map("default_attribute_code")
+  isActive             Boolean          @default(true) @map("is_active")
+  sortOrder            Int              @default(0) @map("sort_order")
+  metadata             Json             @default("{}")
+  createdAt            DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  defaultAttribute     Attribute?       @relation(fields: [defaultAttributeCode], references: [code])
+  quests               Quest[]
+
+  @@map("quest_templates")
+}
+
+model Quest {
+  id            String             @id @default(uuid()) @db.Uuid
+  userId        String             @map("user_id") @db.Uuid
+  templateId    String?            @map("template_id") @db.Uuid
+  questType     QuestType          @map("quest_type")
+  title         String
+  description   String
+  difficulty    QuestDifficulty
+  status        QuestStatus        @default(active)
+  isMandatory   Boolean            @default(false) @map("is_mandatory")
+  isStretch     Boolean            @default(false) @map("is_stretch")
+  rewardXpBase  Int                @map("reward_xp_base")
+  assignedDate  DateTime           @map("assigned_date") @db.Date
+  dueAt         DateTime?          @map("due_at") @db.Timestamptz(6)
+  generatedBy   QuestGeneratedBy   @map("generated_by")
+  aiGenerationId String?           @map("ai_generation_id") @db.Uuid
+  metadata      Json               @default("{}")
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  completedAt   DateTime?          @map("completed_at") @db.Timestamptz(6)
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template      QuestTemplate?     @relation(fields: [templateId], references: [id])
+  aiGeneration  AiGeneration?      @relation(fields: [aiGenerationId], references: [id], onDelete: SetNull)
+  attributeMap  QuestAttributeMap[]
+  logs          QuestLog[]
+  xpLedger      XpLedger[]
+  attributeHistory UserAttributeHistory[]
+
+  @@unique([userId, assignedDate, templateId])
+  @@index([userId, assignedDate, questType])
+  @@map("quests")
+}
+
+model QuestAttributeMap {
+  questId        String        @map("quest_id") @db.Uuid
+  attributeCode  AttributeCode @map("attribute_code")
+  weight         Decimal       @default(1.0) @db.Decimal(5, 2)
+  quest          Quest         @relation(fields: [questId], references: [id], onDelete: Cascade)
+  attribute      Attribute     @relation(fields: [attributeCode], references: [code])
+
+  @@id([questId, attributeCode])
+  @@map("quest_attribute_map")
+}
+
+model QuestLog {
+  id         String            @id @default(uuid()) @db.Uuid
+  questId     String           @map("quest_id") @db.Uuid
+  userId      String           @map("user_id") @db.Uuid
+  completed   Boolean
+  intensity   QuestLogIntensity?
+  note        String?
+  loggedAt    DateTime         @default(now()) @map("logged_at") @db.Timestamptz(6)
+  quest       Quest            @relation(fields: [questId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([questId])
+  @@index([questId, userId])
+  @@map("quest_logs")
+}
+
+model XpLedger {
+  id            String          @id @default(uuid()) @db.Uuid
+  userId        String          @map("user_id") @db.Uuid
+  questId       String?         @map("quest_id") @db.Uuid
+  source        XpLedgerSource
+  deltaXp       Int             @map("delta_xp")
+  totalXpAfter  Int             @map("total_xp_after")
+  metadata      Json            @default("{}")
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quest         Quest?          @relation(fields: [questId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@map("xp_ledger")
+}
+
+model ValidDay {
+  userId                    String    @map("user_id") @db.Uuid
+  dayDate                   DateTime  @map("day_date") @db.Date
+  meaningfulCompletionCount Int       @default(0) @map("meaningful_completion_count")
+  totalXp                   Int       @default(0) @map("total_xp")
+  lowDifficultyXp           Int       @default(0) @map("low_difficulty_xp")
+  isValid                   Boolean   @default(false) @map("is_valid")
+  validatedAt               DateTime? @map("validated_at") @db.Timestamptz(6)
+  streakAwardedAt           DateTime? @map("streak_awarded_at") @db.Timestamptz(6)
+  currentStreakAfter        Int?      @map("current_streak_after")
+  milestonesAwardedJson     Json      @default("[]") @map("milestones_awarded_json")
+  createdAt                 DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                 DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user                      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, dayDate])
+  @@index([userId, dayDate])
+  @@map("valid_days")
+}
+
+model AiGeneration {
+  id                String            @id @default(uuid()) @db.Uuid
+  userId            String            @map("user_id") @db.Uuid
+  generationType    AiGenerationType  @map("generation_type")
+  status            AiGenerationStatus
+  provider          String?
+  modelName         String?           @map("model_name")
+  requestPayload    Json              @map("request_payload")
+  rawResponseText   String?           @map("raw_response_text") @db.Text
+  validatedOutput   Json?             @map("validated_output")
+  rejectionReasons  Json?             @map("rejection_reasons")
+  createdQuestsCount Int              @default(0) @map("created_quests_count")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quests            Quest[]
+
+  @@index([userId, createdAt])
+  @@map("ai_generations")
+}
+
+model UserAttributeHistory {
+  id             String         @id @default(uuid()) @db.Uuid
+  userId         String         @map("user_id") @db.Uuid
+  questId        String?        @map("quest_id") @db.Uuid
+  attributeCode  AttributeCode  @map("attribute_code")
+  delta          Decimal        @db.Decimal(6, 2)
+  previousValue  Decimal        @map("previous_value") @db.Decimal(6, 2)
+  newValue       Decimal        @map("new_value") @db.Decimal(6, 2)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quest          Quest?         @relation(fields: [questId], references: [id], onDelete: SetNull)
+  attribute      Attribute      @relation(fields: [attributeCode], references: [code])
+  userAttribute  UserAttribute  @relation(fields: [userId, attributeCode], references: [userId, attributeCode], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("user_attribute_history")
+}
