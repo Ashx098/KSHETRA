@@ -1,0 +1,29 @@
+{
+  "name": "@kshetra/api",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "nest build",
+    "check": "tsc --noEmit -p tsconfig.json",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:prod": "node dist/main.js"
+  },
+  "dependencies": {
+    "@kshetra/types": "workspace:*",
+    "@nestjs/common": "^11.0.1",
+    "@nestjs/config": "^4.0.0",
+    "@nestjs/core": "^11.0.1",
+    "@nestjs/platform-express": "^11.0.1",
+    "@prisma/client": "6.19.2",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.1",
+    "@nestjs/schematics": "^11.0.0",
+    "@types/node": "^22.10.2",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0"
+  }
+}
