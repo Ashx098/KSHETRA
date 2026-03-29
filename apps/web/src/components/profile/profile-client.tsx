@@ -105,7 +105,10 @@ export function ProfileClient() {
     try {
       const payload = await apiRequest<OnboardingResponseData>("/onboarding", {
         method: "POST",
-        body: onboardingForm,
+        body: {
+          ...onboardingForm,
+          display_name: onboardingForm.display_name.trim() || onboardingForm.username.trim(),
+        },
       });
 
       setStoredUserId(payload.user_id);
@@ -308,19 +311,6 @@ export function ProfileClient() {
               />
             </label>
             <label className="grid gap-2 text-sm">
-              <span>Display Name</span>
-              <input
-                className="rounded-2xl border border-line bg-canvas/60 px-4 py-3"
-                value={onboardingForm.display_name}
-                onChange={(event) =>
-                  setOnboardingForm((current) => ({
-                    ...current,
-                    display_name: event.target.value,
-                  }))
-                }
-              />
-            </label>
-            <label className="grid gap-2 text-sm">
               <span>Timezone</span>
               <input
                 className="rounded-2xl border border-line bg-canvas/60 px-4 py-3"
@@ -420,24 +410,25 @@ export function ProfileClient() {
 
   return (
     <>
-      <section className="rounded-3xl border border-line bg-panel/70 p-5 shadow-panel">
-        <p className="text-xs uppercase tracking-[0.25em] text-accent">Profile</p>
-        <div className="mt-3 grid gap-3 text-sm text-muted">
+      <section className="rounded-3xl border border-accent/22 bg-panel/70 p-5 shadow-panel">
+        <p className="text-xs uppercase tracking-[0.25em] text-accent">Identity</p>
+        <h3 className="mt-3 text-2xl font-semibold tracking-tight">
+          {profile.display_name || profile.username}
+        </h3>
+        <div className="mt-4 grid gap-3 text-sm text-muted">
           <p>{profile.email}</p>
           <p>@{profile.username}</p>
-          <p>Rank {profile.current_rank}</p>
-          <p>Level {profile.current_level}</p>
+          <p>Rank {profile.current_rank} · Level {profile.current_level}</p>
           <p>{profile.total_xp} XP</p>
         </div>
       </section>
 
       <section className="rounded-3xl border border-line bg-panel/70 p-5 shadow-panel">
-        <p className="text-xs uppercase tracking-[0.25em] text-accent">Status</p>
+        <p className="text-xs uppercase tracking-[0.25em] text-accent">System Status</p>
         <div className="mt-3 grid gap-3 text-sm text-muted">
           <p>Onboarding complete: {profile.onboarding_complete ? "yes" : "no"}</p>
           <p>Timezone: {profile.timezone}</p>
-          <p>Motivation mode: {profile.motivation_mode ?? "unset"}</p>
-          <p>Fatigue score: {profile.fatigue_score}</p>
+          <p>Quest loop identity is tied to @{profile.username}</p>
         </div>
       </section>
 
@@ -445,7 +436,13 @@ export function ProfileClient() {
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-accent">Profile Editor</p>
-            <h3 className="mt-2 text-xl font-semibold">Update current identity fields</h3>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight">
+              Keep only the settings that matter right now
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              Display name and motivation mode are still persisted, but they are not yet active
+              enough in the product to justify front-and-center editing here.
+            </p>
           </div>
           <button
             className="rounded-2xl bg-accent px-4 py-3 text-sm font-medium text-canvas"
@@ -457,17 +454,7 @@ export function ProfileClient() {
           </button>
         </div>
         {error ? <p className="mt-4 text-sm text-red-300">{error}</p> : null}
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          <label className="grid gap-2 text-sm">
-            <span>Display Name</span>
-            <input
-              className="rounded-2xl border border-line bg-canvas/60 px-4 py-3"
-              value={profileForm.display_name}
-              onChange={(event) =>
-                setProfileForm((current) => ({ ...current, display_name: event.target.value }))
-              }
-            />
-          </label>
+        <div className="mt-6 grid gap-4 sm:grid-cols-[minmax(0,1fr)_260px]">
           <label className="grid gap-2 text-sm">
             <span>Timezone</span>
             <input
@@ -478,19 +465,13 @@ export function ProfileClient() {
               }
             />
           </label>
-          <label className="grid gap-2 text-sm">
-            <span>Motivation Mode</span>
-            <input
-              className="rounded-2xl border border-line bg-canvas/60 px-4 py-3"
-              value={profileForm.motivation_mode}
-              onChange={(event) =>
-                setProfileForm((current) => ({
-                  ...current,
-                  motivation_mode: event.target.value,
-                }))
-              }
-            />
-          </label>
+          <div className="rounded-2xl border border-line bg-canvas/40 px-4 py-4 text-sm text-muted">
+            <p className="text-[11px] uppercase tracking-[0.22em] text-accent">Current Identity</p>
+            <p className="mt-3 text-base font-medium text-text">
+              {profile.display_name || profile.username}
+            </p>
+            <p className="mt-1">@{profile.username}</p>
+          </div>
         </div>
       </section>
 
@@ -498,7 +479,13 @@ export function ProfileClient() {
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-accent">Goals</p>
-            <h3 className="mt-2 text-xl font-semibold">Edit active and inactive goals</h3>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight">
+              Edit active and inactive goals
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              Goals remain as stored planning context. This screen keeps them editable, but hides
+              lower-value profile fields that are not yet meaningfully used elsewhere.
+            </p>
           </div>
         </div>
         <div className="mt-6 grid gap-4">
@@ -507,6 +494,20 @@ export function ProfileClient() {
               key={goal.id}
               className="grid gap-3 rounded-2xl border border-line bg-canvas/30 p-4"
             >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="rounded-full border border-line bg-canvas/60 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-muted">
+                  {goal.goal_type}
+                </span>
+                <span
+                  className={`rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.18em] ${
+                    goal.is_active
+                      ? "bg-emerald-500/12 text-emerald-300"
+                      : "bg-canvas/80 text-muted"
+                  }`}
+                >
+                  {goal.is_active ? "Active" : "Inactive"}
+                </span>
+              </div>
               <div className="grid gap-3 sm:grid-cols-4">
                 <select
                   className="rounded-2xl border border-line bg-canvas/60 px-4 py-3 text-sm"
@@ -571,7 +572,7 @@ export function ProfileClient() {
                 }
               />
               <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
-                <span>Status: {goal.is_active ? "active" : "inactive"}</span>
+                <span>Priority {goal.priority_weight}</span>
                 <button
                   className="rounded-2xl bg-accent px-4 py-3 font-medium text-canvas"
                   type="button"
@@ -655,7 +656,7 @@ export function ProfileClient() {
 
       <section className="rounded-3xl border border-line bg-panel/70 p-5 shadow-panel sm:col-span-2">
         <p className="text-xs uppercase tracking-[0.25em] text-accent">Attributes</p>
-        <h3 className="mt-2 text-xl font-semibold">Seeded starting state</h3>
+        <h3 className="mt-2 text-2xl font-semibold tracking-tight">Seeded starting state</h3>
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {attributes.map((attribute) => (
             <article
@@ -685,4 +686,3 @@ export function ProfileClient() {
     </>
   );
 }
-

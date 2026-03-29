@@ -17,6 +17,11 @@ body {
     ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+::selection {
+  background: rgba(212, 168, 79, 0.25);
+  color: #edf2f7;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -24,6 +29,63 @@ a {
 
 * {
   box-sizing: border-box;
+}
+
+.home-stage .stage-item {
+  opacity: 0;
+  transform: translateY(14px);
+  animation: stage-reveal 0.55s ease-out forwards;
+}
+
+.home-stage .stage-delay-1 {
+  animation-delay: 0.05s;
+}
+
+.home-stage .stage-delay-2 {
+  animation-delay: 0.12s;
+}
+
+.home-stage .stage-delay-3 {
+  animation-delay: 0.18s;
+}
+
+.home-stage .stage-delay-4 {
+  animation-delay: 0.24s;
+}
+
+.home-stage .stage-delay-5 {
+  animation-delay: 0.3s;
+}
+
+.card-float-soft {
+  animation: card-float-soft 6s ease-in-out infinite;
+}
+
+.home-radar-shell {
+  animation: radar-settle 0.7s ease-out;
+}
+
+.progress-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.18) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: progress-shimmer 2.8s ease-in-out infinite;
+}
+
+.quest-success-pop {
+  animation: quest-success-pop 0.75s ease-out;
 }
 
 .radar-pulse {
@@ -43,5 +105,87 @@ a {
   100% {
     opacity: 0;
     transform: scale(1.8);
+  }
+}
+
+@keyframes stage-reveal {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes card-float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes radar-settle {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes progress-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes quest-success-pop {
+  0% {
+    transform: scale(0.98);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.3);
+  }
+
+  60% {
+    transform: scale(1.01);
+    box-shadow: 0 0 0 14px rgba(16, 185, 129, 0);
+  }
+
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.reward-flash {
+  animation: reward-flash 0.75s ease-out;
+}
+
+@keyframes reward-flash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(212, 168, 79, 0.35);
+    transform: translateY(2px);
+  }
+
+  100% {
+    box-shadow: 0 0 0 22px rgba(212, 168, 79, 0);
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-stage .stage-item,
+  .card-float-soft,
+  .home-radar-shell,
+  .progress-shimmer::after,
+  .quest-success-pop,
+  .radar-pulse,
+  .reward-flash {
+    animation: none !important;
+    transform: none !important;
   }
 }

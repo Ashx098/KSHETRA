@@ -95,26 +95,26 @@ export function ProgressClient() {
 
   return (
     <>
-      <section className="rounded-3xl border border-line bg-panel/70 p-5 shadow-panel">
+      <section className="rounded-3xl border border-accent/22 bg-panel/70 p-5 shadow-panel">
         <p className="text-xs uppercase tracking-[0.25em] text-accent">Rank / Level</p>
-        <h3 className="mt-3 text-3xl font-semibold">
+        <h3 className="mt-3 text-3xl font-semibold tracking-tight">
           {summary.rank} · {summary.level}
         </h3>
-        <p className="mt-2 text-sm text-muted">{summary.total_xp} total XP</p>
+        <p className="mt-2 text-sm leading-6 text-muted">{summary.total_xp} total XP</p>
       </section>
 
       <section className="rounded-3xl border border-line bg-panel/70 p-5 shadow-panel">
         <p className="text-xs uppercase tracking-[0.25em] text-accent">Streak</p>
-        <h3 className="mt-3 text-3xl font-semibold">
+        <h3 className="mt-3 text-3xl font-semibold tracking-tight">
           {summary.current_streak_days} days
         </h3>
-        <p className="mt-2 text-sm text-muted">
+        <p className="mt-2 text-sm leading-6 text-muted">
           Longest {summary.longest_streak_days} · Status {summary.streak_status}
         </p>
-        <p className="mt-2 text-sm text-muted">
+        <p className="mt-2 text-sm leading-6 text-muted">
           Last valid day: {summary.last_valid_day ?? "none"}
         </p>
-        <p className="mt-2 text-sm text-muted">
+        <p className="mt-2 text-sm leading-6 text-muted">
           Next milestone:{" "}
           {summary.next_streak_milestone_days
             ? `${summary.next_streak_milestone_days} days (+${summary.next_streak_milestone_bonus_xp} XP)`
@@ -126,7 +126,7 @@ export function ProgressClient() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_390px] lg:items-center">
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-accent">Current Attribute Form</p>
-            <h3 className="mt-2 text-xl font-semibold">Signature state view</h3>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight">Signature state view</h3>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
               This radar is presentation-only. It renders current attribute values from
               backend state without introducing new progression logic.
@@ -142,7 +142,7 @@ export function ProgressClient() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-accent">Rank Progress</p>
-            <h3 className="mt-2 text-xl font-semibold">
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight">
               {summary.rank_progress.current_rank} to {summary.rank_progress.next_rank ?? "Max"}
             </h3>
           </div>

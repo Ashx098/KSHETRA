@@ -67,6 +67,7 @@ const ATTRIBUTE_GAIN_BY_EFFORT_LAYER = {
 } as const;
 
 const MAX_COMPLETION_NOTE_LENGTH = 280;
+const MAX_DAILY_BUNDLE_GENERATION_RETRIES = 3;
 
 @Injectable()
 export class QuestsService {
@@ -108,53 +109,70 @@ export class QuestsService {
       });
     }
 
-    const bundle = await this.prisma.$transaction(
-      async (tx) => {
-        const existing = await tx.quest.findMany({
-          where: {
-            userId,
-            questType: "daily",
-            assignedDate,
-          },
-          include: {
-            attributeMap: true,
-          },
-          orderBy: [{ isMandatory: "desc" }, { isStretch: "asc" }, { createdAt: "asc" }],
-        });
-
-        if (existing.length === 0) {
-          const selectedTemplates = this.resolveSelectedTemplates(
-            templates,
-            aiAttempt.validatedPlan,
-          );
-
-          await this.createDailyQuestsFromTemplates(tx, {
-            userId,
-            assignedDate,
-            templates: selectedTemplates,
-            generatedBy: aiAttempt.generatedBy,
-            aiGenerationId: acceptedGenerationId,
-          });
-        }
-
-        return await tx.quest.findMany({
-          where: {
-            userId,
-            questType: "daily",
-            assignedDate,
-          },
-          include: {
-            attributeMap: true,
-          },
-          orderBy: [{ isMandatory: "desc" }, { isStretch: "asc" }, { createdAt: "asc" }],
-        });
-      },
-      {
-        isolationLevel: "Serializable",
-      },
-    );
+    const bundle = await this.runDailyBundleTransactionWithRetry({
+      userId,
+      assignedDate,
+      templates: this.resolveSelectedTemplates(templates, aiAttempt.validatedPlan),
+      generatedBy: aiAttempt.generatedBy,
+      aiGenerationId: acceptedGenerationId,
+    });
 
     return this.toDailyBundle(bundle, localDate);
+  }
+
+  private async runDailyBundleTransactionWithRetry(input: {
+    userId: string;
+    assignedDate: Date;
+    templates: QuestTemplate[];
+    generatedBy: "ai" | "template";
+    aiGenerationId: string | null;
+  }): Promise<QuestRecord[]> {
+    for (let attempt = 1; attempt <= MAX_DAILY_BUNDLE_GENERATION_RETRIES; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(
+          async (tx) => {
+            const existing = await tx.quest.findMany({
+              where: {
+                userId: input.userId,
+                questType: "daily",
+                assignedDate: input.assignedDate,
+              },
+              include: {
+                attributeMap: true,
+              },
+              orderBy: [{ isMandatory: "desc" }, { isStretch: "asc" }, { createdAt: "asc" }],
+            });
+
+            if (existing.length === 0) {
+              await this.createDailyQuestsFromTemplates(tx, input);
+            }
+
+            return await tx.quest.findMany({
+              where: {
+                userId: input.userId,
+                questType: "daily",
+                assignedDate: input.assignedDate,
+              },
+              include: {
+                attributeMap: true,
+              },
+              orderBy: [{ isMandatory: "desc" }, { isStretch: "asc" }, { createdAt: "asc" }],
+            });
+          },
+          {
+            isolationLevel: "Serializable",
+          },
+        );
+      } catch (error) {
+        if (this.isRetryableDailyBundleConflict(error) && attempt < MAX_DAILY_BUNDLE_GENERATION_RETRIES) {
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    throw new InternalServerErrorException("Daily quest generation could not be completed.");
   }
 
   async completeQuest(
@@ -747,6 +765,13 @@ export class QuestsService {
 
   private calculateLevel(totalXp: number): number {
     return Math.floor(Math.sqrt(Math.max(0, totalXp)));
+  }
+
+  private isRetryableDailyBundleConflict(error: unknown): boolean {
+    return (
+      error instanceof PrismaClientKnownRequestError &&
+      error.code === "P2034"
+    );
   }
 
   private getLocalDateString(timezone: string, date = new Date()): string {
