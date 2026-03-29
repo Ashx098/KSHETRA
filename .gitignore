@@ -1,6 +1,7 @@
 node_modules
 .pnpm-store
 .next
+.next-build
 dist
 coverage
 .turbo
