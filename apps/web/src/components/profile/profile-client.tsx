@@ -2,16 +2,21 @@
 
 import {
   type AttributeResponseData,
+  type GuidePreferencesResponseData,
+  type GuidePreferencesUpdateInput,
   GOAL_TYPES,
   type GoalPayload,
   type GoalResponseData,
   type MeResponseData,
+  type NotificationPreferencesResponseData,
+  type NotificationPreferencesUpdateInput,
   type OnboardingInput,
   type OnboardingResponseData,
 } from "@kshetra/types";
 import { startTransition, useEffect, useState } from "react";
 
 import { apiRequest } from "../../lib/api-client";
+import { GuideDockCard } from "../guide/guide-card";
 import { getStoredUserId, setStoredUserId } from "../../lib/session";
 
 const defaultGoal = (): GoalPayload => ({
@@ -26,6 +31,9 @@ export function ProfileClient() {
   const [profile, setProfile] = useState<MeResponseData | null>(null);
   const [goals, setGoals] = useState<GoalResponseData[]>([]);
   const [attributes, setAttributes] = useState<AttributeResponseData[]>([]);
+  const [notificationPreferences, setNotificationPreferences] =
+    useState<NotificationPreferencesResponseData | null>(null);
+  const [guidePreferences, setGuidePreferences] = useState<GuidePreferencesResponseData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,15 +69,23 @@ export function ProfileClient() {
     setError(null);
 
     try {
-      const [me, goalList, attributeList] = await Promise.all([
+      const [me, goalList, attributeList, preferences, guidePrefs] = await Promise.all([
         apiRequest<MeResponseData>("/me", { userId: activeUserId }),
         apiRequest<GoalResponseData[]>("/goals", { userId: activeUserId }),
         apiRequest<AttributeResponseData[]>("/attributes", { userId: activeUserId }),
+        apiRequest<NotificationPreferencesResponseData>("/notification-preferences", {
+          userId: activeUserId,
+        }),
+        apiRequest<GuidePreferencesResponseData>("/guide/preferences", {
+          userId: activeUserId,
+        }),
       ]);
 
       setProfile(me);
       setGoals(goalList);
       setAttributes(attributeList);
+      setNotificationPreferences(preferences);
+      setGuidePreferences(guidePrefs);
       setProfileForm({
         display_name: me.display_name,
         timezone: me.timezone,
@@ -120,6 +136,19 @@ export function ProfileClient() {
         display_name: payload.profile.display_name,
         timezone: payload.profile.timezone,
         motivation_mode: payload.profile.motivation_mode ?? "",
+      });
+      setNotificationPreferences({
+        daily_ready_enabled: true,
+        streak_risk_enabled: true,
+        event_alerts_enabled: true,
+        quiet_hours_start: null,
+        quiet_hours_end: null,
+      });
+      setGuidePreferences({
+        enabled: true,
+        reactive_popups_enabled: true,
+        screen_nudges_enabled: true,
+        tone_mode: "energetic_anime",
       });
       setGoalDrafts(
         Object.fromEntries(
@@ -270,6 +299,61 @@ export function ProfileClient() {
     }
   }
 
+  async function handleNotificationPreferencesSave(): Promise<void> {
+    if (!userId || !notificationPreferences) {
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const updated = await apiRequest<NotificationPreferencesResponseData>(
+        "/notification-preferences",
+        {
+          method: "PATCH",
+          userId,
+          body: notificationPreferences as NotificationPreferencesUpdateInput,
+        },
+      );
+
+      setNotificationPreferences(updated);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to update notification preferences.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleGuidePreferencesSave(): Promise<void> {
+    if (!userId || !guidePreferences) {
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const updated = await apiRequest<GuidePreferencesResponseData>("/guide/preferences", {
+        method: "PATCH",
+        userId,
+        body: guidePreferences as GuidePreferencesUpdateInput,
+      });
+
+      setGuidePreferences(updated);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error ? requestError.message : "Unable to update guide preferences.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (loading) {
     return (
       <section className="rounded-3xl border border-line bg-panel/70 p-5 shadow-panel sm:col-span-2">
@@ -284,7 +368,7 @@ export function ProfileClient() {
         <p className="text-xs uppercase tracking-[0.25em] text-accent">Onboarding</p>
         <h3 className="mt-3 text-xl font-semibold">Create your initial KSHETRA state</h3>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-          This phase creates the user record, profile, goals, attributes, and streak state only. No quests are generated here.
+          Set up identity, goals, and starting state. Quests begin after onboarding.
         </p>
         {error ? <p className="mt-4 text-sm text-red-300">{error}</p> : null}
 
@@ -410,6 +494,16 @@ export function ProfileClient() {
 
   return (
     <>
+      <GuideDockCard
+        userId={userId}
+        screen="profile"
+        card={profile.guide_card}
+        message={profile.guide_message}
+        onMessageDismissed={() =>
+          setProfile((current) => (current ? { ...current, guide_message: null } : current))
+        }
+      />
+
       <section className="rounded-3xl border border-accent/22 bg-panel/70 p-5 shadow-panel">
         <p className="text-xs uppercase tracking-[0.25em] text-accent">Identity</p>
         <h3 className="mt-3 text-2xl font-semibold tracking-tight">
@@ -432,17 +526,153 @@ export function ProfileClient() {
         </div>
       </section>
 
+      {notificationPreferences ? (
+        <section className="rounded-3xl border border-line bg-panel/70 p-5 shadow-panel sm:col-span-2">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.25em] text-accent">
+                Notification Preferences
+              </p>
+              <h3 className="mt-2 text-2xl font-semibold tracking-tight">
+                Keep alerts useful, not noisy
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-muted">
+                In-app alerts only. Quiet hours are stored now, but not enforced yet.
+              </p>
+            </div>
+            <button
+              className="rounded-2xl bg-accent px-4 py-3 text-sm font-medium text-canvas"
+              disabled={saving}
+              type="button"
+              onClick={() => void handleNotificationPreferencesSave()}
+            >
+              Save alerts
+            </button>
+          </div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <ToggleRow
+              label="Daily ready"
+              value={notificationPreferences.daily_ready_enabled}
+              onChange={(checked) =>
+                setNotificationPreferences((current) =>
+                  current ? { ...current, daily_ready_enabled: checked } : current,
+                )
+              }
+            />
+            <ToggleRow
+              label="Streak risk"
+              value={notificationPreferences.streak_risk_enabled}
+              onChange={(checked) =>
+                setNotificationPreferences((current) =>
+                  current ? { ...current, streak_risk_enabled: checked } : current,
+                )
+              }
+            />
+            <ToggleRow
+              label="Event alerts"
+              value={notificationPreferences.event_alerts_enabled}
+              onChange={(checked) =>
+                setNotificationPreferences((current) =>
+                  current ? { ...current, event_alerts_enabled: checked } : current,
+                )
+              }
+            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-2 text-sm">
+                <span>Quiet start</span>
+                <input
+                  className="rounded-2xl border border-line bg-canvas/60 px-4 py-3"
+                  placeholder="22:00"
+                  value={notificationPreferences.quiet_hours_start ?? ""}
+                  onChange={(event) =>
+                    setNotificationPreferences((current) =>
+                      current ? { ...current, quiet_hours_start: event.target.value } : current,
+                    )
+                  }
+                />
+              </label>
+              <label className="grid gap-2 text-sm">
+                <span>Quiet end</span>
+                <input
+                  className="rounded-2xl border border-line bg-canvas/60 px-4 py-3"
+                  placeholder="07:00"
+                  value={notificationPreferences.quiet_hours_end ?? ""}
+                  onChange={(event) =>
+                    setNotificationPreferences((current) =>
+                      current ? { ...current, quiet_hours_end: event.target.value } : current,
+                    )
+                  }
+                />
+              </label>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {guidePreferences ? (
+        <section className="rounded-3xl border border-line bg-panel/70 p-5 shadow-panel sm:col-span-2">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.25em] text-accent">Guide Preferences</p>
+              <h3 className="mt-2 text-2xl font-semibold tracking-tight">Companion behavior</h3>
+              <p className="mt-2 text-sm leading-6 text-muted">
+                Keep Kael helpful, sharp, and bounded to real system state.
+              </p>
+            </div>
+            <button
+              className="rounded-2xl bg-accent px-4 py-3 text-sm font-medium text-canvas"
+              disabled={saving}
+              type="button"
+              onClick={() => void handleGuidePreferencesSave()}
+            >
+              Save guide
+            </button>
+          </div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <ToggleRow
+              label="Guide enabled"
+              value={guidePreferences.enabled}
+              onChange={(checked) =>
+                setGuidePreferences((current) =>
+                  current ? { ...current, enabled: checked } : current,
+                )
+              }
+            />
+            <ToggleRow
+              label="Reactive popups"
+              value={guidePreferences.reactive_popups_enabled}
+              onChange={(checked) =>
+                setGuidePreferences((current) =>
+                  current ? { ...current, reactive_popups_enabled: checked } : current,
+                )
+              }
+            />
+            <ToggleRow
+              label="Screen nudges"
+              value={guidePreferences.screen_nudges_enabled}
+              onChange={(checked) =>
+                setGuidePreferences((current) =>
+                  current ? { ...current, screen_nudges_enabled: checked } : current,
+                )
+              }
+            />
+            <div className="rounded-2xl border border-line bg-canvas/40 px-4 py-4 text-sm text-muted">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-accent">Tone mode</p>
+              <p className="mt-3 text-base font-medium text-text">
+                {guidePreferences.tone_mode.replace("_", " ")}
+              </p>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <section className="rounded-3xl border border-line bg-panel/70 p-5 shadow-panel sm:col-span-2">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-accent">Profile Editor</p>
             <h3 className="mt-2 text-2xl font-semibold tracking-tight">
-              Keep only the settings that matter right now
+              Core settings
             </h3>
-            <p className="mt-2 text-sm leading-6 text-muted">
-              Display name and motivation mode are still persisted, but they are not yet active
-              enough in the product to justify front-and-center editing here.
-            </p>
           </div>
           <button
             className="rounded-2xl bg-accent px-4 py-3 text-sm font-medium text-canvas"
@@ -480,11 +710,10 @@ export function ProfileClient() {
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-accent">Goals</p>
             <h3 className="mt-2 text-2xl font-semibold tracking-tight">
-              Edit active and inactive goals
+              Goal context
             </h3>
             <p className="mt-2 text-sm leading-6 text-muted">
-              Goals remain as stored planning context. This screen keeps them editable, but hides
-              lower-value profile fields that are not yet meaningfully used elsewhere.
+              Keep goals current so planning surfaces have clean context.
             </p>
           </div>
         </div>
@@ -656,7 +885,7 @@ export function ProfileClient() {
 
       <section className="rounded-3xl border border-line bg-panel/70 p-5 shadow-panel sm:col-span-2">
         <p className="text-xs uppercase tracking-[0.25em] text-accent">Attributes</p>
-        <h3 className="mt-2 text-2xl font-semibold tracking-tight">Seeded starting state</h3>
+        <h3 className="mt-2 text-2xl font-semibold tracking-tight">Current attribute base</h3>
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {attributes.map((attribute) => (
             <article
@@ -684,5 +913,32 @@ export function ProfileClient() {
         </div>
       </section>
     </>
+  );
+}
+
+function ToggleRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="flex items-center justify-between rounded-2xl border border-line bg-canvas/40 px-4 py-4 text-left"
+      onClick={() => onChange(!value)}
+    >
+      <span className="text-sm text-text">{label}</span>
+      <span
+        className={`rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.18em] ${
+          value ? "bg-emerald-500/12 text-emerald-300" : "bg-canvas/80 text-muted"
+        }`}
+      >
+        {value ? "On" : "Off"}
+      </span>
+    </button>
   );
 }
