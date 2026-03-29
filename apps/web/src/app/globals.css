@@ -165,6 +165,586 @@ a {
   animation: reward-flash 0.75s ease-out;
 }
 
+.mission-complete-rise {
+  animation: mission-complete-rise 0.95s ease-out;
+}
+
+.guide-stack {
+  position: relative;
+}
+
+.guide-dock {
+  border-radius: 1.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  padding: 1rem;
+  box-shadow: 0 22px 52px rgba(15, 23, 42, 0.24);
+  overflow: hidden;
+  position: relative;
+  animation: guide-dock-float 6.4s ease-in-out infinite;
+}
+
+.guide-dock-calm {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.74));
+}
+
+.guide-dock-bold {
+  background: linear-gradient(180deg, rgba(18, 34, 58, 0.94), rgba(15, 23, 42, 0.8));
+  border-color: rgba(212, 168, 79, 0.26);
+}
+
+.guide-dock-battle {
+  background: linear-gradient(180deg, rgba(49, 24, 34, 0.95), rgba(21, 23, 42, 0.84));
+  border-color: rgba(244, 114, 114, 0.24);
+}
+
+.guide-dock-head {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.guide-portrait-frame {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.guide-avatar-aura {
+  position: absolute;
+  inset: -0.45rem;
+  border-radius: 1.3rem;
+  pointer-events: none;
+  filter: blur(10px);
+  opacity: 0.55;
+  animation: guide-aura-pulse 3.4s ease-in-out infinite;
+}
+
+.guide-avatar-aura-calm {
+  background: radial-gradient(circle, rgba(212, 168, 79, 0.2), transparent 68%);
+}
+
+.guide-avatar-aura-bold {
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.24), transparent 68%);
+}
+
+.guide-avatar-aura-battle {
+  background: radial-gradient(circle, rgba(248, 113, 113, 0.26), transparent 68%);
+}
+
+.guide-dock::before {
+  content: "";
+  position: absolute;
+  inset: -20% auto auto -10%;
+  width: 8rem;
+  height: 8rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(212, 168, 79, 0.14), transparent 68%);
+  pointer-events: none;
+  filter: blur(8px);
+}
+
+.guide-dock-avatar,
+.guide-popup-avatar {
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 1rem;
+  border: 1px solid rgba(212, 168, 79, 0.22);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.guide-dock-avatar {
+  width: 88px;
+  height: 112px;
+  animation: guide-idle-breathe 5.8s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+.guide-popup-avatar {
+  width: 58px;
+  height: 74px;
+  animation: guide-popup-avatar-enter 280ms ease-out;
+}
+
+.guide-dock-avatar-bold {
+  animation-duration: 4.8s;
+}
+
+.guide-dock-avatar-battle {
+  animation-duration: 4.1s;
+}
+
+.guide-dock-live-bold {
+  box-shadow: 0 26px 64px rgba(15, 23, 42, 0.3), 0 0 0 1px rgba(212, 168, 79, 0.06) inset;
+}
+
+.guide-dock-live-battle {
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.34), 0 0 0 1px rgba(244, 114, 114, 0.08) inset;
+}
+
+.guide-motion-engaged {
+  animation-duration: 5.2s;
+}
+
+.guide-motion-engaged .guide-dock-avatar {
+  animation-duration: 4.2s;
+}
+
+.guide-motion-alert {
+  animation: guide-alert-rise 560ms ease-out, guide-dock-float 6s ease-in-out 560ms infinite;
+}
+
+.guide-motion-alert .guide-dock-avatar {
+  animation: guide-alert-avatar 520ms ease-out, guide-idle-breathe 4.2s ease-in-out 520ms infinite;
+}
+
+.guide-motion-alert .guide-avatar-aura {
+  animation-duration: 1.8s;
+  opacity: 0.78;
+}
+
+.guide-motion-thinking .guide-dock-avatar,
+.guide-motion-thinking .guide-thinking-image {
+  animation-duration: 2.4s;
+}
+
+.guide-motion-thinking .guide-avatar-aura {
+  animation-duration: 1.5s;
+  opacity: 0.82;
+}
+
+.guide-name {
+  font-size: 0.7rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(212, 168, 79, 0.86);
+}
+
+.guide-title,
+.guide-popup-title,
+.guide-answer-title {
+  margin-top: 0.35rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.guide-dock-copy {
+  animation: guide-copy-settle 320ms ease-out;
+}
+
+.guide-body,
+.guide-popup-body,
+.guide-answer-body {
+  margin-top: 0.45rem;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: rgba(226, 232, 240, 0.82);
+}
+
+.guide-signal {
+  margin-top: 0.75rem;
+  width: 3.2rem;
+  height: 0.22rem;
+  border-radius: 9999px;
+  background: rgba(148, 163, 184, 0.22);
+  position: relative;
+  overflow: hidden;
+}
+
+.guide-signal::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 48%;
+  border-radius: inherit;
+  animation: guide-signal-sweep 2.7s ease-in-out infinite;
+}
+
+.guide-signal-calm::after {
+  background: linear-gradient(90deg, rgba(212, 168, 79, 0.42), rgba(212, 168, 79, 0.9));
+}
+
+.guide-signal-bold::after {
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.5), rgba(212, 168, 79, 1));
+}
+
+.guide-signal-battle::after {
+  background: linear-gradient(90deg, rgba(244, 114, 114, 0.45), rgba(248, 113, 113, 0.95));
+}
+
+.guide-expand,
+.guide-submit,
+.guide-dismiss,
+.guide-chip {
+  border-radius: 9999px;
+  transition: opacity 160ms ease, transform 160ms ease, background 160ms ease;
+}
+
+.guide-expand,
+.guide-submit {
+  background: rgba(212, 168, 79, 0.95);
+  color: #0f172a;
+  padding: 0.72rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.guide-dismiss {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 0.55rem 0.8rem;
+  font-size: 0.8rem;
+  color: rgba(226, 232, 240, 0.78);
+}
+
+.guide-chip {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.38);
+  color: rgba(226, 232, 240, 0.82);
+  padding: 0.55rem 0.8rem;
+  font-size: 0.82rem;
+}
+
+.guide-panel {
+  margin-top: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  padding-top: 1rem;
+}
+
+.guide-panel-enter {
+  animation: guide-panel-enter 240ms ease-out;
+}
+
+.guide-ask-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.guide-input {
+  width: 100%;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.45);
+  padding: 0.88rem 1rem;
+  color: #f8fafc;
+  outline: none;
+}
+
+.guide-answer {
+  margin-top: 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.35);
+  padding: 1rem;
+  animation: guide-answer-enter 280ms ease-out;
+}
+
+.guide-answer-battle {
+  border-color: rgba(244, 114, 114, 0.22);
+  background: rgba(41, 21, 31, 0.42);
+}
+
+.guide-answer-bullets {
+  margin-top: 0.7rem;
+  display: grid;
+  gap: 0.4rem;
+  color: rgba(226, 232, 240, 0.78);
+  font-size: 0.88rem;
+}
+
+.guide-popup {
+  margin-bottom: 0.9rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  border-radius: 1.25rem;
+  padding: 0.9rem 1rem;
+  box-shadow: 0 22px 48px rgba(15, 23, 42, 0.26);
+  animation: guide-popup-rise 260ms ease-out;
+}
+
+.guide-popup-copy {
+  animation: guide-copy-settle 320ms ease-out;
+}
+
+.guide-popup-title-enter {
+  animation: guide-title-flicker 220ms ease-out;
+}
+
+.guide-popup-body-enter {
+  animation: guide-body-fade 320ms ease-out 60ms both;
+}
+
+.guide-popup-calm {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.guide-popup-bold {
+  background: rgba(20, 33, 52, 0.94);
+  border: 1px solid rgba(212, 168, 79, 0.26);
+}
+
+.guide-popup-battle {
+  background: rgba(41, 21, 31, 0.95);
+  border: 1px solid rgba(244, 114, 114, 0.22);
+}
+
+@keyframes guide-popup-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes guide-dock-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes guide-aura-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.97);
+  }
+
+  50% {
+    opacity: 0.82;
+    transform: scale(1.03);
+  }
+}
+
+@keyframes guide-alert-rise {
+  0% {
+    transform: translateY(10px) scale(0.985);
+  }
+
+  55% {
+    transform: translateY(-3px) scale(1.01);
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes guide-alert-avatar {
+  0% {
+    transform: translateY(6px) scale(0.96);
+  }
+
+  55% {
+    transform: translateY(-4px) scale(1.035);
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.guide-thinking {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.9rem;
+  align-items: center;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.35);
+  padding: 0.9rem 1rem;
+  animation: guide-answer-enter 220ms ease-out;
+}
+
+.guide-thinking-avatar {
+  position: relative;
+  width: 52px;
+  height: 64px;
+  border-radius: 0.9rem;
+  overflow: hidden;
+  border: 1px solid rgba(212, 168, 79, 0.2);
+  background: rgba(15, 23, 42, 0.45);
+  flex-shrink: 0;
+}
+
+.guide-thinking-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: guide-idle-breathe 3s ease-in-out infinite;
+}
+
+.guide-thinking-lines {
+  margin-top: 0.5rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.guide-thinking-lines span {
+  display: block;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.12),
+    rgba(212, 168, 79, 0.45),
+    rgba(148, 163, 184, 0.12)
+  );
+  background-size: 220% 100%;
+  animation: guide-thinking-shimmer 1.5s ease-in-out infinite;
+}
+
+.guide-thinking-lines span:nth-child(1) {
+  width: 10rem;
+}
+
+.guide-thinking-lines span:nth-child(2) {
+  width: 8rem;
+  animation-delay: 0.08s;
+}
+
+.guide-thinking-lines span:nth-child(3) {
+  width: 6.6rem;
+  animation-delay: 0.14s;
+}
+
+@keyframes guide-idle-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-3px) scale(1.015);
+  }
+}
+
+@keyframes guide-popup-avatar-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes guide-copy-settle {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes guide-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes guide-answer-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes guide-title-flicker {
+  from {
+    opacity: 0;
+    letter-spacing: 0.02em;
+  }
+
+  to {
+    opacity: 1;
+    letter-spacing: 0;
+  }
+}
+
+@keyframes guide-body-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes guide-signal-sweep {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  55%,
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+@keyframes guide-thinking-shimmer {
+  0% {
+    background-position: 120% 0;
+  }
+
+  100% {
+    background-position: -120% 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .guide-dock-head {
+    gap: 0.8rem;
+  }
+
+  .guide-dock-avatar {
+    width: 64px;
+    height: 82px;
+  }
+
+  .guide-popup {
+    padding: 0.8rem 0.85rem;
+  }
+
+  .guide-ask-row {
+    flex-direction: column;
+  }
+
+  .guide-submit,
+  .guide-expand {
+    width: 100%;
+  }
+}
+
 @keyframes reward-flash {
   0% {
     box-shadow: 0 0 0 0 rgba(212, 168, 79, 0.35);
@@ -177,6 +757,23 @@ a {
   }
 }
 
+@keyframes mission-complete-rise {
+  0% {
+    transform: translateY(8px);
+    box-shadow: 0 0 0 0 rgba(244, 114, 114, 0.28);
+  }
+
+  65% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 18px rgba(244, 114, 114, 0);
+  }
+
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 0 rgba(244, 114, 114, 0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .home-stage .stage-item,
   .card-float-soft,
@@ -184,7 +781,24 @@ a {
   .progress-shimmer::after,
   .quest-success-pop,
   .radar-pulse,
-  .reward-flash {
+  .reward-flash,
+  .guide-popup,
+  .guide-dock,
+  .guide-dock-avatar,
+  .guide-avatar-aura,
+  .guide-thinking-image,
+  .guide-signal::after,
+  .guide-panel-enter,
+  .guide-answer,
+  .guide-thinking,
+  .guide-popup-title-enter,
+  .guide-popup-body-enter,
+  .guide-dock-copy {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .mission-complete-rise {
     animation: none !important;
     transform: none !important;
   }
