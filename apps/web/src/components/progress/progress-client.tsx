@@ -8,6 +8,7 @@ import type {
 import { startTransition, useEffect, useState } from "react";
 
 import { apiRequest } from "../../lib/api-client";
+import { GuideDockCard } from "../guide/guide-card";
 import { RadarChart } from "../radar/radar-chart";
 import { getStoredUserId } from "../../lib/session";
 
@@ -100,8 +101,17 @@ export function ProgressClient() {
         <h3 className="mt-3 text-3xl font-semibold tracking-tight">
           {summary.rank} · {summary.level}
         </h3>
-        <p className="mt-2 text-sm leading-6 text-muted">{summary.total_xp} total XP</p>
+        <p className="mt-2 text-sm leading-6 text-muted">
+          {summary.rank_context_label} · {summary.total_xp} total XP
+        </p>
       </section>
+
+      <GuideDockCard
+        userId={getStoredUserId()}
+        screen="progress"
+        card={history.guide_card}
+        message={history.guide_message}
+      />
 
       <section className="rounded-3xl border border-line bg-panel/70 p-5 shadow-panel">
         <p className="text-xs uppercase tracking-[0.25em] text-accent">Streak</p>
@@ -126,15 +136,37 @@ export function ProgressClient() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_390px] lg:items-center">
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-accent">Current Attribute Form</p>
-            <h3 className="mt-2 text-2xl font-semibold tracking-tight">Signature state view</h3>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight">Current attribute form</h3>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
-              This radar is presentation-only. It renders current attribute values from
-              backend state without introducing new progression logic.
+              The shape shows where recent system pressure is landing.
             </p>
           </div>
           <div className="rounded-3xl border border-line bg-canvas/35 p-4">
             <RadarChart attributes={attributes} size="full" pulseRecentChanges />
           </div>
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-line bg-panel/70 p-5 shadow-panel sm:col-span-2">
+        <div className="grid gap-3 md:grid-cols-3">
+          <InsightCard
+            label="Recent trend"
+            value={labelize(history.insights.recent_xp_trend)}
+            supporting="Last 3 valid days"
+          />
+          <InsightCard
+            label="Most improved"
+            value={
+              history.insights.most_improved_attribute.code
+                ? `${labelize(history.insights.most_improved_attribute.code)} +${history.insights.most_improved_attribute.delta.toFixed(1)}`
+                : "No clear edge"
+            }
+            supporting={`Across ${range}`}
+          />
+          <InsightCard
+            label="Current focus"
+            value={history.insights.current_focus_signal}
+          />
         </div>
       </section>
 
@@ -279,6 +311,24 @@ function Metric({ label, value }: { label: string; value: string }) {
       <p className="text-xs uppercase tracking-[0.2em] text-muted">{label}</p>
       <p className="mt-2 text-lg font-semibold text-text">{value}</p>
     </div>
+  );
+}
+
+function InsightCard({
+  label,
+  value,
+  supporting,
+}: {
+  label: string;
+  value: string;
+  supporting?: string;
+}) {
+  return (
+    <article className="rounded-2xl border border-line bg-canvas/40 px-4 py-4">
+      <p className="text-xs uppercase tracking-[0.2em] text-accent">{label}</p>
+      <p className="mt-3 text-base font-medium leading-6 text-text">{value}</p>
+      {supporting ? <p className="mt-2 text-sm text-muted">{supporting}</p> : null}
+    </article>
   );
 }
 
