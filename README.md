@@ -1,36 +1,115 @@
 # KSHETRA
 
-KSHETRA is a deterministic life progression system built as a Bun monorepo with:
+KSHETRA is a life progression game built as a Bun monorepo.
 
-- `apps/web`: Next.js App Router frontend
-- `apps/api`: NestJS REST API
-- `packages/types`: shared TypeScript transport contracts
-- `prisma/schema.prisma`: canonical schema and migration ownership
+It is not a generic tracker and it is not a frontend-driven dashboard. The backend owns progression truth: quest assignment, XP, attribute movement, valid-day checks, streaks, events, dungeon progress, raid rewards, and audit history all resolve server-side.
 
-It is not a generic productivity app. System truth stays in the backend. XP, attributes, streaks, rank progress, valid-day checks, quest assignment, and audit history are authoritative server-side flows.
+## What The Product Is
 
-## Current Product Surface
+KSHETRA turns daily life into a structured progression loop:
 
-Implemented through the current build phases:
+- `Home`: the daily command surface
+- `Progress`: rank, streak, radar state, and history
+- `Missions`: longer arcs through dungeons and raids
+- `Profile`: identity, goals, reset context, and preferences
 
-- deterministic onboarding and persisted user state
-- goals, attributes, profile, progression summary
-- daily quest loop with quest templates, quest instances, quest completion
-- audited XP ledger and user attribute history
+The current system includes:
+
+- onboarding and persisted player state
+- daily quest generation with deterministic fallback and constrained AI planning
+- XP ledger and attribute history audit trails
 - valid-day and streak evaluation
-- streak milestone bonuses through separate ledger entries
-- progression history endpoint
-- custom SVG radar visualization on Home and Progress
-- constrained AI planner path for daily quest generation with strict validation and deterministic fallback
+- milestone bonuses
+- bounded mystery and recovery events
+- medium-term dungeons
+- heavier raids with verification summary flow
+- in-app notifications
+- companion guide support
+
+## Core Game Loops
+
+### Daily loop
+
+Each system day generates:
+
+- `3 mandatory` quests
+- `2 optional` quests
+- `1 stretch` quest
+
+Completing quests grants:
+
+- XP through `xp_ledger`
+- attribute changes through `user_attribute_history`
+
+Daily bundles are generated once per system day, not on every refresh. The system currently uses a local `8:00 AM` reset boundary per user timezone.
+
+### Attributes
+
+KSHETRA tracks six attributes:
+
+- `Strength`
+- `Wisdom`
+- `Focus`
+- `Mastery`
+- `Wealth`
+- `Bond`
+
+Attributes move through deterministic backend-owned mappings from quest, event, dungeon, and raid completions. The frontend visualizes state, but does not invent progression logic.
+
+### Events
+
+Events are rare, bounded interventions:
+
+- `recovery` events help salvage messy days
+- `mystery` events add controlled surprise
+
+They are optional, dismissible, auditable, and they never replace the core quest loop.
+
+### Dungeons
+
+Dungeons are medium-term structured challenges:
+
+- heavier than quests
+- multi-session
+- tracked through explicit objectives
+
+They add weekly pressure without replacing daily play.
+
+### Raids
+
+Raids are major milestone arcs:
+
+- heavier than dungeons
+- require multi-step objective closure
+- require a real verification summary before completion rewards are released
+
+They are designed to feel significant, not routine.
+
+### AI role
+
+AI is constrained and advisory only.
+
+It may:
+
+- help select from approved quest templates
+- help explain state through the companion guide
+
+It may not:
+
+- invent gameplay rules
+- mutate progression state directly
+- bypass backend validation
+
+If AI output is invalid or unavailable, the backend falls back safely to deterministic generation.
 
 ## Tech Stack
 
-- Package manager/runtime: Bun
-- Frontend: Next.js, React, TypeScript, Tailwind CSS
-- Backend: NestJS, TypeScript
-- Database: PostgreSQL
-- ORM: Prisma
-- Shared contracts: workspace package in `packages/types`
+- Runtime and package manager: `Bun`
+- Frontend: `Next.js`, `React`, `TypeScript`, `Tailwind CSS`
+- Backend: `NestJS`
+- Database: `PostgreSQL`
+- ORM: `Prisma`
+- Shared contracts: `packages/types`
 
 ## Repository Layout
 
@@ -50,13 +129,14 @@ KSHETRA/
 
 ## Local Setup
 
-1. Install dependencies
+### 1. Install dependencies
 
 ```bash
+cd /Users/avinash.m/Projects/KSHETRA
 bun install
 ```
 
-2. Create environment files
+### 2. Create environment files
 
 ```bash
 cp .env.example .env
@@ -64,37 +144,48 @@ cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.local.example apps/web/.env.local
 ```
 
-3. Generate Prisma client
+### 3. Start PostgreSQL
+
+If you use Docker or OrbStack:
+
+```bash
+docker start kshetra-postgres || docker run -d \
+  --name kshetra-postgres \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=kshetra \
+  -p 5432:5432 \
+  postgres:16
+```
+
+### 4. Generate Prisma client, migrate, and seed
 
 ```bash
 bun run prisma:generate
-```
-
-4. Apply local migrations
-
-```bash
 bun run prisma:migrate
-```
-
-5. Seed base data
-
-```bash
 bun run prisma:seed
 ```
 
-6. Run the API
+### 5. Start the API
 
 ```bash
 bun run dev:api
 ```
 
-7. Run the web app
+### 6. Start the web app
+
+In another terminal:
 
 ```bash
 bun run dev:web
 ```
 
-## Root Scripts
+### 7. Open the app
+
+- Web: [http://localhost:3000](http://localhost:3000)
+- API health: [http://localhost:4000/api/v1/health](http://localhost:4000/api/v1/health)
+
+## Common Commands
 
 - `bun run dev:web`
 - `bun run dev:api`
@@ -107,7 +198,7 @@ bun run dev:web
 
 ## Environment
 
-Root and API env examples include:
+Important env keys:
 
 - `DATABASE_URL`
 - `API_PORT`
@@ -118,20 +209,48 @@ Root and API env examples include:
 - `AI_MODEL`
 - `AI_API_KEY`
 
-The AI settings are optional until you want Phase 5 planner behavior to use your endpoint. Without them, quest generation safely falls back to deterministic template assignment.
+AI env values are optional until you want planner and guide behavior to use a live model. If AI is not configured or the model fails validation, KSHETRA keeps working through deterministic fallback behavior.
 
-## API Entry Points
+## API Surface
 
-- Health: `GET /api/v1/health`
-- Profile: `GET /api/v1/me`
-- Onboarding: `POST /api/v1/onboarding`
-- Goals: `GET|POST|PATCH|DELETE /api/v1/goals`
-- Attributes: `GET /api/v1/attributes`
-- Progression summary: `GET /api/v1/progression/summary`
-- Progression history: `GET /api/v1/progression/history`
-- Daily quests: `GET /api/v1/quests/today`
-- Quest completion: `POST /api/v1/quests/:questId/complete`
+Key routes in the current build:
+
+- `GET /api/v1/health`
+- `GET /api/v1/me`
+- `POST /api/v1/onboarding`
+- `GET|POST|PATCH|DELETE /api/v1/goals`
+- `GET /api/v1/home`
+- `GET /api/v1/progression/summary`
+- `GET /api/v1/progression/history`
+- `GET /api/v1/missions`
+- `GET /api/v1/quests/today`
+- `POST /api/v1/quests/:questId/complete`
+- `GET /api/v1/events/active`
+- `POST /api/v1/events/:eventId/complete`
+- `POST /api/v1/events/:eventId/dismiss`
+- `GET /api/v1/notifications`
+- `POST /api/v1/notifications/:notificationId/dismiss`
+- `GET /api/v1/guide/preferences`
+- `PATCH /api/v1/guide/preferences`
+- `POST /api/v1/guide/ask`
 
 ## Documentation
 
-Project and implementation docs live in `docs/`. For an end-to-end local setup and architecture runbook, see [DEVELOPMENT-RUNBOOK.md](/Users/avinash.m/Projects/KSHETRA/docs/DEVELOPMENT-RUNBOOK.md).
+Docs live in `/Users/avinash.m/Projects/KSHETRA/docs`.
+
+Useful starting points:
+
+- [DEVELOPMENT-RUNBOOK.md](/Users/avinash.m/Projects/KSHETRA/docs/DEVELOPMENT-RUNBOOK.md)
+- [FUTURE-PLAN.md](/Users/avinash.m/Projects/KSHETRA/docs/FUTURE-PLAN.md)
+
+## Operating Principles
+
+KSHETRA should stay:
+
+- grounded
+- auditable
+- difficult to exploit
+- AI-assisted only where safe
+- visually expressive without becoming noisy
+
+If a new feature makes the system less clear, less traceable, or less deterministic, it is the wrong feature at the wrong time.
