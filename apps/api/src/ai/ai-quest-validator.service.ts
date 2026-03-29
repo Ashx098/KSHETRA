@@ -9,6 +9,10 @@ export interface ValidatedDailyQuestPlan {
 interface AllowedTemplate {
   code: string;
   assignment_kind: "mandatory" | "optional" | "stretch";
+  difficulty?: "low" | "medium" | "high";
+  attribute_family?: string;
+  cooldown_days?: number;
+  max_occurrences_in_7d?: number;
 }
 
 @Injectable()
@@ -16,6 +20,10 @@ export class AiQuestValidatorService {
   validateDailyPlan(
     value: unknown,
     allowedTemplates: AllowedTemplate[],
+    constraints?: {
+      recentMandatoryTemplateCodes?: string[];
+      recent7dTemplateCounts?: Record<string, number>;
+    },
   ): {
     valid: boolean;
     normalized: ValidatedDailyQuestPlan | null;
@@ -84,6 +92,41 @@ export class AiQuestValidatorService {
       const match = allowedByCode.get(code);
       if (!match || match.assignment_kind !== "stretch") {
         rejectionReasons.push(`Invalid stretch template code: ${code}.`);
+      }
+    }
+
+    const mandatoryFamilies = new Set(
+      mandatory
+        .map((code) => allowedByCode.get(code)?.attribute_family)
+        .filter((value): value is string => Boolean(value)),
+    );
+    if (mandatoryFamilies.size < Math.min(3, mandatory.length)) {
+      rejectionReasons.push("Mandatory quests must cover at least 3 attribute families.");
+    }
+
+    const highDifficultyCount = allCodes.filter(
+      (code) => allowedByCode.get(code)?.difficulty === "high",
+    ).length;
+    if (highDifficultyCount > 1) {
+      rejectionReasons.push("Daily plan overloads high difficulty content.");
+    }
+
+    const recentMandatory = new Set(constraints?.recentMandatoryTemplateCodes ?? []);
+    for (const code of mandatory) {
+      if (recentMandatory.has(code)) {
+        rejectionReasons.push(`Mandatory template repeated too soon: ${code}.`);
+      }
+    }
+
+    const recent7dCounts = constraints?.recent7dTemplateCounts ?? {};
+    for (const code of allCodes) {
+      const match = allowedByCode.get(code);
+      if (!match?.max_occurrences_in_7d) {
+        continue;
+      }
+
+      if ((recent7dCounts[code] ?? 0) >= match.max_occurrences_in_7d) {
+        rejectionReasons.push(`Template exceeds 7-day repetition limit: ${code}.`);
       }
     }
 
