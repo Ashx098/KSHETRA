@@ -3,6 +3,11 @@ import type { Prisma, Streak } from "@prisma/client";
 import type { StreakResponseData } from "@kshetra/types";
 
 import { dateToIso } from "../common/http/serializers";
+import {
+  getSystemDayString,
+  shiftDateString,
+  toDateOnly,
+} from "../common/time/system-day";
 import { PrismaService } from "../prisma/prisma.service";
 
 const VALID_DAY_MIN_COMPLETIONS = 3;
@@ -54,8 +59,8 @@ export class StreakService {
     totalXpAfterBonuses: number | null;
     levelAfterBonuses: number | null;
   }> {
-    const localDate = this.getLocalDateString(timezone);
-    const dayDate = this.toDateOnly(localDate);
+    const systemDate = getSystemDayString(timezone);
+    const dayDate = toDateOnly(systemDate);
     const completedQuests = await tx.quest.findMany({
       where: {
         userId,
@@ -137,7 +142,7 @@ export class StreakService {
       const previousValidDay = streak.lastValidDay
         ? this.formatDateOnly(streak.lastValidDay)
         : null;
-      const yesterday = this.shiftDateString(localDate, -1);
+      const yesterday = shiftDateString(systemDate, -1);
 
       currentStreakDays =
         previousValidDay === yesterday ? streak.currentStreakDays + 1 : 1;
@@ -182,7 +187,8 @@ export class StreakService {
             deltaXp: milestone.bonusXp,
             totalXpAfter: totalXpAfterBonuses,
             metadata: {
-              day_date: localDate,
+              day_date: systemDate,
+              reset_hour_local: 8,
               streak_days: milestone.days,
             },
           },
@@ -268,26 +274,7 @@ export class StreakService {
     return Math.floor(Math.sqrt(Math.max(0, totalXp)));
   }
 
-  private getLocalDateString(timezone: string, date = new Date()): string {
-    return new Intl.DateTimeFormat("en-CA", {
-      timeZone: timezone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(date);
-  }
-
-  private toDateOnly(value: string): Date {
-    return new Date(`${value}T00:00:00.000Z`);
-  }
-
   private formatDateOnly(value: Date): string {
     return value.toISOString().slice(0, 10);
-  }
-
-  private shiftDateString(value: string, days: number): string {
-    const date = this.toDateOnly(value);
-    date.setUTCDate(date.getUTCDate() + days);
-    return this.formatDateOnly(date);
   }
 }
