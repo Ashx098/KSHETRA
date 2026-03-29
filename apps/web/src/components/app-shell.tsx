@@ -53,8 +53,8 @@ export function AppShell({
               </p>
               <p className="flex items-center justify-between gap-3">
                 <span>Missions surface</span>
-                <span className="rounded-full bg-canvas/80 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-muted">
-                  Pending
+                <span className="rounded-full bg-emerald-500/12 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-emerald-300">
+                  Live
                 </span>
               </p>
             </div>
@@ -63,7 +63,7 @@ export function AppShell({
           <nav className="flex flex-wrap gap-2 lg:flex-col">
             {navigation.map((item) => {
               const active = section === item.section;
-              const pending = item.section === "missions";
+              const pending = false;
 
               return (
                 <Link
