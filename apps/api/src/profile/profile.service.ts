@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 import type { MeResponseData, ProfileUpdateInput } from "@kshetra/types";
 
 import { decimalToNumber } from "../common/http/serializers";
+import { GuideService } from "../guide/guide.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { UsersService } from "../users/users.service";
 
@@ -10,12 +11,19 @@ export class ProfileService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
+    private readonly guideService: GuideService,
   ) {}
 
   async getMe(userId: string): Promise<MeResponseData> {
     const user = await this.usersService.getUserStateOrThrow(userId);
+    const me = this.toMeResponse(user);
+    const guide = await this.guideService.getProfileGuide(userId, { me });
 
-    return this.toMeResponse(user);
+    return {
+      ...me,
+      guide_card: guide.guide_card,
+      guide_message: guide.guide_message,
+    };
   }
 
   async updateProfile(
@@ -95,4 +103,3 @@ export class ProfileService {
     };
   }
 }
-

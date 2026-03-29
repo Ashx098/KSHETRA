@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import type { ProgressionHistoryData, ProgressionSummaryData, Rank } from "@kshetra/types";
 
 import { decimalToNumber } from "../common/http/serializers";
+import { GuideService } from "../guide/guide.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { StreakService } from "../streak/streak.service";
 import { UsersService } from "../users/users.service";
@@ -19,12 +20,31 @@ const rankConfigs: Array<{
   { rank: "S", xpThreshold: 20000, requiredStreak: 30 },
 ];
 
+const rankContextByRank: Record<Rank, { label: string; subtitle: string }> = {
+  E: { label: "Foundation", subtitle: "Build the floor and make the loop repeatable." },
+  D: { label: "Momentum", subtitle: "Consistency is forming and the day is starting to hold." },
+  C: { label: "Consolidation", subtitle: "Progress is compounding into a dependable pattern." },
+  B: { label: "Expansion", subtitle: "Capacity is widening across more demanding layers." },
+  A: { label: "Command", subtitle: "You are operating the system with real control." },
+  S: { label: "Ascension", subtitle: "The full structure is integrated and sustained." },
+};
+
+const focusSignalByAttribute: Record<string, string> = {
+  strength: "Physical momentum is leading the current cycle.",
+  wisdom: "Reflection and judgment are driving the current cycle.",
+  focus: "Attention control is leading the current cycle.",
+  mastery: "Skill-building is leading the current cycle.",
+  wealth: "Output and leverage are leading the current cycle.",
+  bond: "Relationship energy is leading the current cycle.",
+};
+
 @Injectable()
 export class ProgressionService {
   constructor(
     private readonly usersService: UsersService,
     private readonly prisma: PrismaService,
     private readonly streakService: StreakService,
+    private readonly guideService: GuideService,
   ) {}
 
   calculateLevel(totalXp: number): number {
@@ -43,6 +63,8 @@ export class ProgressionService {
 
     return {
       rank: currentRank,
+      rank_context_label: rankContextByRank[currentRank].label,
+      rank_context_subtitle: rankContextByRank[currentRank].subtitle,
       level: this.calculateLevel(user.profile.totalXp),
       total_xp: user.profile.totalXp,
       current_streak_days: user.streak.currentStreakDays,
@@ -122,6 +144,8 @@ export class ProgressionService {
         delta_xp: entry.deltaXp,
         created_at: entry.createdAt.toISOString(),
         quest_id: entry.questId,
+        event_id: entry.eventId,
+        dungeon_id: entry.dungeonId,
       });
       xpByDay.set(day, bucket);
     }
@@ -142,6 +166,8 @@ export class ProgressionService {
         delta: decimalToNumber(entry.delta),
         created_at: entry.createdAt.toISOString(),
         quest_id: entry.questId,
+        event_id: entry.eventId,
+        dungeon_id: entry.dungeonId,
       });
       attributeByDay.set(day, bucket);
     }
@@ -155,8 +181,49 @@ export class ProgressionService {
         ledger_id: entry.id,
       }));
 
-    return {
+    const attributeDeltaByCode = new Map<string, number>();
+    for (const entry of attributeHistoryEntries) {
+      const current = attributeDeltaByCode.get(entry.attributeCode) ?? 0;
+      attributeDeltaByCode.set(entry.attributeCode, current + decimalToNumber(entry.delta));
+    }
+
+    const mostImprovedEntry = Array.from(attributeDeltaByCode.entries()).sort((a, b) => {
+      if (b[1] !== a[1]) {
+        return b[1] - a[1];
+      }
+
+      return a[0].localeCompare(b[0]);
+    })[0] ?? null;
+
+    const recentValidDays = validDays
+      .filter((day) => day.isValid)
+      .sort((a, b) => a.dayDate.getTime() - b.dayDate.getTime())
+      .slice(-3);
+    const firstRecentValidDay = recentValidDays[0];
+    const lastRecentValidDay = recentValidDays[recentValidDays.length - 1];
+    const xpTrend =
+      !firstRecentValidDay || !lastRecentValidDay || recentValidDays.length < 2
+        ? "flat"
+        : lastRecentValidDay.totalXp - firstRecentValidDay.totalXp >= 6
+          ? "rising"
+          : lastRecentValidDay.totalXp - firstRecentValidDay.totalXp <= -6
+            ? "falling"
+            : "flat";
+
+    const focusCode = mostImprovedEntry?.[0] ?? null;
+
+    const historyData: ProgressionHistoryData = {
       range,
+      insights: {
+        recent_xp_trend: xpTrend,
+        most_improved_attribute: {
+          code: (focusCode as ProgressionHistoryData["insights"]["most_improved_attribute"]["code"]) ?? null,
+          delta: mostImprovedEntry?.[1] ?? 0,
+        },
+        current_focus_signal: focusCode
+          ? focusSignalByAttribute[focusCode] ?? "Recent gains are spread evenly across the system."
+          : "Not enough recent movement to establish a clear focus yet.",
+      },
       xp_timeline: Array.from(xpByDay.values()).sort((a, b) => b.date.localeCompare(a.date)),
       attribute_timeline: Array.from(attributeByDay.values()).sort((a, b) =>
         b.date.localeCompare(a.date),
@@ -170,6 +237,17 @@ export class ProgressionService {
         current_streak_after: day.currentStreakAfter,
       })),
       milestones,
+    };
+
+    const guide = await this.guideService.getProgressGuide(userId, {
+      summary: await this.getSummary(userId),
+      history: historyData,
+    });
+
+    return {
+      ...historyData,
+      guide_card: guide.guide_card,
+      guide_message: guide.guide_message,
     };
   }
 
