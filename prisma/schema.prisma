@@ -79,6 +79,57 @@ enum QuestGeneratedBy {
   template
 }
 
+enum EventType {
+  mystery
+  recovery
+}
+
+enum EventStatus {
+  active
+  completed
+  expired
+  cancelled
+}
+
+enum EventGeneratedBy {
+  system
+}
+
+enum DungeonStatus {
+  active
+  completed
+  expired
+  cancelled
+}
+
+enum DungeonGeneratedBy {
+  system
+}
+
+enum RaidStatus {
+  active
+  verification_pending
+  completed
+  cancelled
+}
+
+enum RaidGeneratedBy {
+  system
+}
+
+enum NotificationType {
+  daily_ready
+  streak_risk
+  event_available
+}
+
+enum NotificationStatus {
+  pending
+  shown
+  dismissed
+  expired
+}
+
 enum QuestLogIntensity {
   low
   medium
@@ -87,11 +138,16 @@ enum QuestLogIntensity {
 
 enum XpLedgerSource {
   quest_completion
+  event_completion
+  dungeon_completion
+  raid_completion
   streak_milestone_bonus
 }
 
 enum AiGenerationType {
   daily_quest_plan
+  guide_reactive
+  guide_explain
 }
 
 enum AiGenerationStatus {
@@ -99,6 +155,37 @@ enum AiGenerationStatus {
   rejected
   fallback_used
   failed
+}
+
+enum GuideScreen {
+  home
+  missions
+  progress
+  profile
+}
+
+enum GuideMessageType {
+  nudge
+  milestone
+  warning
+  explain
+}
+
+enum GuideMessageStatus {
+  active
+  shown
+  dismissed
+  expired
+}
+
+enum GuideStateVariant {
+  calm
+  bold
+  battle
+}
+
+enum GuideToneMode {
+  energetic_anime
 }
 
 model User {
@@ -116,6 +203,16 @@ model User {
   streak      Streak?
   quests      Quest[]
   questLogs   QuestLog[]
+  events      Event[]
+  eventLogs   EventLog[]
+  dungeons    Dungeon[]
+  dungeonLogs DungeonLog[]
+  raids       Raid[]
+  raidLogs    RaidLog[]
+  notifications Notification[]
+  notificationPreferences NotificationPreference?
+  guideMessages GuideMessage[]
+  guidePreferences GuidePreference?
   xpLedger    XpLedger[]
   attributeHistory UserAttributeHistory[]
   validDays   ValidDay[]
@@ -140,6 +237,31 @@ model UserProfile {
   @@map("user_profiles")
 }
 
+model NotificationPreference {
+  userId             String   @id @map("user_id") @db.Uuid
+  dailyReadyEnabled  Boolean  @default(true) @map("daily_ready_enabled")
+  streakRiskEnabled  Boolean  @default(true) @map("streak_risk_enabled")
+  eventAlertsEnabled Boolean  @default(true) @map("event_alerts_enabled")
+  quietHoursStart    String?  @map("quiet_hours_start")
+  quietHoursEnd      String?  @map("quiet_hours_end")
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+model GuidePreference {
+  userId                String        @id @map("user_id") @db.Uuid
+  enabled               Boolean       @default(true)
+  reactivePopupsEnabled Boolean       @default(true) @map("reactive_popups_enabled")
+  screenNudgesEnabled   Boolean       @default(true) @map("screen_nudges_enabled")
+  toneMode              GuideToneMode @default(energetic_anime) @map("tone_mode")
+  updatedAt             DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("guide_preferences")
+}
+
 model UserGoal {
   id             String    @id @default(uuid()) @db.Uuid
   userId         String    @map("user_id") @db.Uuid
@@ -162,6 +284,12 @@ model Attribute {
   userStates  UserAttribute[]
   questTemplates QuestTemplate[]
   questAttributeMaps QuestAttributeMap[]
+  eventTemplates EventTemplate[]
+  eventAttributeMaps EventAttributeMap[]
+  dungeonTemplates DungeonTemplate[]
+  dungeonAttributeMaps DungeonAttributeMap[]
+  raidTemplates RaidTemplate[]
+  raidAttributeMaps RaidAttributeMap[]
   attributeHistory UserAttributeHistory[]
 
   @@map("attributes")
@@ -216,6 +344,101 @@ model QuestTemplate {
   @@map("quest_templates")
 }
 
+model EventTemplate {
+  id                   String          @id @default(uuid()) @db.Uuid
+  code                 String          @unique
+  title                String
+  description          String
+  eventType            EventType       @map("event_type")
+  difficulty           QuestDifficulty
+  rewardXpBase         Int             @map("reward_xp_base")
+  defaultAttributeCode AttributeCode?  @map("default_attribute_code")
+  isActive             Boolean         @default(true) @map("is_active")
+  sortOrder            Int             @default(0) @map("sort_order")
+  metadata             Json            @default("{}")
+  createdAt            DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  defaultAttribute     Attribute?      @relation(fields: [defaultAttributeCode], references: [code])
+  events               Event[]
+
+  @@map("event_templates")
+}
+
+model DungeonTemplate {
+  id                   String          @id @default(uuid()) @db.Uuid
+  code                 String          @unique
+  title                String
+  description          String
+  difficulty           QuestDifficulty
+  rewardXpBase         Int             @map("reward_xp_base")
+  expectedDurationDays Int             @default(7) @map("expected_duration_days")
+  defaultAttributeCode AttributeCode?  @map("default_attribute_code")
+  isActive             Boolean         @default(true) @map("is_active")
+  sortOrder            Int             @default(0) @map("sort_order")
+  metadata             Json            @default("{}")
+  createdAt            DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  defaultAttribute     Attribute?      @relation(fields: [defaultAttributeCode], references: [code])
+  objectives           DungeonTemplateObjective[]
+  dungeons             Dungeon[]
+
+  @@map("dungeon_templates")
+}
+
+model RaidTemplate {
+  id                   String          @id @default(uuid()) @db.Uuid
+  code                 String          @unique
+  title                String
+  description          String
+  difficulty           QuestDifficulty
+  rewardXpBase         Int             @map("reward_xp_base")
+  expectedDurationDays Int             @default(14) @map("expected_duration_days")
+  defaultAttributeCode AttributeCode?  @map("default_attribute_code")
+  isActive             Boolean         @default(true) @map("is_active")
+  sortOrder            Int             @default(0) @map("sort_order")
+  metadata             Json            @default("{}")
+  createdAt            DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  defaultAttribute     Attribute?      @relation(fields: [defaultAttributeCode], references: [code])
+  objectives           RaidTemplateObjective[]
+  raids                Raid[]
+
+  @@map("raid_templates")
+}
+
+model RaidTemplateObjective {
+  id                   String       @id @default(uuid()) @db.Uuid
+  templateId           String       @map("template_id") @db.Uuid
+  objectiveCode        String       @map("objective_code")
+  title                String
+  description          String
+  targetCount          Int          @default(1) @map("target_count")
+  requiresVerification Boolean      @default(false) @map("requires_verification")
+  sortOrder            Int          @default(0) @map("sort_order")
+  metadata             Json         @default("{}")
+  template             RaidTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  objectives           RaidObjective[]
+
+  @@unique([templateId, objectiveCode])
+  @@map("raid_template_objectives")
+}
+
+model DungeonTemplateObjective {
+  id            String          @id @default(uuid()) @db.Uuid
+  templateId    String          @map("template_id") @db.Uuid
+  objectiveCode String          @map("objective_code")
+  title         String
+  description   String
+  targetCount   Int             @default(1) @map("target_count")
+  sortOrder     Int             @default(0) @map("sort_order")
+  metadata      Json            @default("{}")
+  template      DungeonTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  objectives    DungeonObjective[]
+
+  @@unique([templateId, objectiveCode])
+  @@map("dungeon_template_objectives")
+}
+
 model Quest {
   id            String             @id @default(uuid()) @db.Uuid
   userId        String             @map("user_id") @db.Uuid
@@ -249,6 +472,96 @@ model Quest {
   @@map("quests")
 }
 
+model Event {
+  id             String            @id @default(uuid()) @db.Uuid
+  userId         String            @map("user_id") @db.Uuid
+  templateId     String?           @map("template_id") @db.Uuid
+  eventType      EventType         @map("event_type")
+  status         EventStatus       @default(active)
+  title          String
+  description    String
+  difficulty     QuestDifficulty
+  rewardXpBase   Int               @map("reward_xp_base")
+  systemDay      DateTime          @map("system_day") @db.Date
+  triggeredAt    DateTime          @map("triggered_at") @db.Timestamptz(6)
+  availableFrom  DateTime          @map("available_from") @db.Timestamptz(6)
+  expiresAt      DateTime          @map("expires_at") @db.Timestamptz(6)
+  completedAt    DateTime?         @map("completed_at") @db.Timestamptz(6)
+  generatedBy    EventGeneratedBy  @default(system) @map("generated_by")
+  triggerContext Json              @default("{}") @map("trigger_context")
+  metadata       Json              @default("{}")
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template       EventTemplate?    @relation(fields: [templateId], references: [id])
+  attributeMap   EventAttributeMap[]
+  logs           EventLog[]
+  notifications  Notification[]
+  xpLedger       XpLedger[]
+  attributeHistory UserAttributeHistory[]
+
+  @@unique([userId, eventType, systemDay])
+  @@index([userId, status, expiresAt])
+  @@map("events")
+}
+
+model Dungeon {
+  id             String             @id @default(uuid()) @db.Uuid
+  userId         String             @map("user_id") @db.Uuid
+  templateId     String?            @map("template_id") @db.Uuid
+  status         DungeonStatus      @default(active)
+  title          String
+  description    String
+  difficulty     QuestDifficulty
+  rewardXpBase   Int                @map("reward_xp_base")
+  startedAt      DateTime           @default(now()) @map("started_at") @db.Timestamptz(6)
+  expiresAt      DateTime?          @map("expires_at") @db.Timestamptz(6)
+  completedAt    DateTime?          @map("completed_at") @db.Timestamptz(6)
+  generatedBy    DungeonGeneratedBy @default(system) @map("generated_by")
+  metadata       Json               @default("{}")
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template       DungeonTemplate?   @relation(fields: [templateId], references: [id])
+  objectives     DungeonObjective[]
+  attributeMap   DungeonAttributeMap[]
+  logs           DungeonLog[]
+  xpLedger       XpLedger[]
+  attributeHistory UserAttributeHistory[]
+
+  @@index([userId, status])
+  @@map("dungeons")
+}
+
+model Raid {
+  id                  String            @id @default(uuid()) @db.Uuid
+  userId              String            @map("user_id") @db.Uuid
+  templateId          String?           @map("template_id") @db.Uuid
+  status              RaidStatus        @default(active)
+  title               String
+  description         String
+  difficulty          QuestDifficulty
+  rewardXpBase        Int               @map("reward_xp_base")
+  startedAt           DateTime          @default(now()) @map("started_at") @db.Timestamptz(6)
+  completedAt         DateTime?         @map("completed_at") @db.Timestamptz(6)
+  generatedBy         RaidGeneratedBy   @default(system) @map("generated_by")
+  verificationSummary String?           @map("verification_summary") @db.Text
+  artifactReference   String?           @map("artifact_reference") @db.Text
+  metadata            Json              @default("{}")
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template            RaidTemplate?     @relation(fields: [templateId], references: [id])
+  objectives          RaidObjective[]
+  attributeMap        RaidAttributeMap[]
+  logs                RaidLog[]
+  xpLedger            XpLedger[]
+  attributeHistory    UserAttributeHistory[]
+
+  @@index([userId, status])
+  @@map("raids")
+}
+
 model QuestAttributeMap {
   questId        String        @map("quest_id") @db.Uuid
   attributeCode  AttributeCode @map("attribute_code")
@@ -276,10 +589,185 @@ model QuestLog {
   @@map("quest_logs")
 }
 
+model EventAttributeMap {
+  eventId        String        @map("event_id") @db.Uuid
+  attributeCode  AttributeCode @map("attribute_code")
+  weight         Decimal       @default(1.0) @db.Decimal(5, 2)
+  event          Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  attribute      Attribute     @relation(fields: [attributeCode], references: [code])
+
+  @@id([eventId, attributeCode])
+  @@map("event_attribute_map")
+}
+
+model EventLog {
+  id         String      @id @default(uuid()) @db.Uuid
+  eventId     String     @map("event_id") @db.Uuid
+  userId      String     @map("user_id") @db.Uuid
+  completed   Boolean
+  note        String?
+  loggedAt    DateTime   @default(now()) @map("logged_at") @db.Timestamptz(6)
+  event       Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId])
+  @@index([eventId, userId])
+  @@map("event_logs")
+}
+
+model DungeonObjective {
+  id                  String                   @id @default(uuid()) @db.Uuid
+  dungeonId           String                   @map("dungeon_id") @db.Uuid
+  templateObjectiveId String?                  @map("template_objective_id") @db.Uuid
+  objectiveCode       String                   @map("objective_code")
+  title               String
+  description         String
+  targetCount         Int                      @default(1) @map("target_count")
+  currentCount        Int                      @default(0) @map("current_count")
+  isCompleted         Boolean                  @default(false) @map("is_completed")
+  completedAt         DateTime?                @map("completed_at") @db.Timestamptz(6)
+  sortOrder           Int                      @default(0) @map("sort_order")
+  metadata            Json                     @default("{}")
+  dungeon             Dungeon                  @relation(fields: [dungeonId], references: [id], onDelete: Cascade)
+  templateObjective   DungeonTemplateObjective? @relation(fields: [templateObjectiveId], references: [id], onDelete: SetNull)
+  logs                DungeonLog[]
+
+  @@unique([dungeonId, objectiveCode])
+  @@map("dungeon_objectives")
+}
+
+model DungeonAttributeMap {
+  dungeonId      String        @map("dungeon_id") @db.Uuid
+  attributeCode  AttributeCode @map("attribute_code")
+  weight         Decimal       @default(1.0) @db.Decimal(5, 2)
+  dungeon        Dungeon       @relation(fields: [dungeonId], references: [id], onDelete: Cascade)
+  attribute      Attribute     @relation(fields: [attributeCode], references: [code])
+
+  @@id([dungeonId, attributeCode])
+  @@map("dungeon_attribute_map")
+}
+
+model DungeonLog {
+  id              String            @id @default(uuid()) @db.Uuid
+  dungeonId        String           @map("dungeon_id") @db.Uuid
+  objectiveId      String           @map("objective_id") @db.Uuid
+  userId           String           @map("user_id") @db.Uuid
+  deltaProgress    Int              @default(1) @map("delta_progress")
+  note             String?
+  loggedAt         DateTime         @default(now()) @map("logged_at") @db.Timestamptz(6)
+  dungeon          Dungeon          @relation(fields: [dungeonId], references: [id], onDelete: Cascade)
+  objective        DungeonObjective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([dungeonId, objectiveId, loggedAt])
+  @@map("dungeon_logs")
+}
+
+model RaidObjective {
+  id                   String                @id @default(uuid()) @db.Uuid
+  raidId               String                @map("raid_id") @db.Uuid
+  templateObjectiveId  String?               @map("template_objective_id") @db.Uuid
+  objectiveCode        String                @map("objective_code")
+  title                String
+  description          String
+  targetCount          Int                   @default(1) @map("target_count")
+  currentCount         Int                   @default(0) @map("current_count")
+  isCompleted          Boolean               @default(false) @map("is_completed")
+  completedAt          DateTime?             @map("completed_at") @db.Timestamptz(6)
+  requiresVerification Boolean               @default(false) @map("requires_verification")
+  sortOrder            Int                   @default(0) @map("sort_order")
+  metadata             Json                  @default("{}")
+  raid                 Raid                  @relation(fields: [raidId], references: [id], onDelete: Cascade)
+  templateObjective    RaidTemplateObjective? @relation(fields: [templateObjectiveId], references: [id], onDelete: SetNull)
+  logs                 RaidLog[]
+
+  @@unique([raidId, objectiveCode])
+  @@map("raid_objectives")
+}
+
+model RaidAttributeMap {
+  raidId         String        @map("raid_id") @db.Uuid
+  attributeCode  AttributeCode @map("attribute_code")
+  weight         Decimal       @default(1.0) @db.Decimal(5, 2)
+  raid           Raid          @relation(fields: [raidId], references: [id], onDelete: Cascade)
+  attribute      Attribute     @relation(fields: [attributeCode], references: [code])
+
+  @@id([raidId, attributeCode])
+  @@map("raid_attribute_map")
+}
+
+model RaidLog {
+  id              String        @id @default(uuid()) @db.Uuid
+  raidId           String       @map("raid_id") @db.Uuid
+  objectiveId      String       @map("objective_id") @db.Uuid
+  userId           String       @map("user_id") @db.Uuid
+  deltaProgress    Int          @default(1) @map("delta_progress")
+  note             String?
+  loggedAt         DateTime     @default(now()) @map("logged_at") @db.Timestamptz(6)
+  raid             Raid         @relation(fields: [raidId], references: [id], onDelete: Cascade)
+  objective        RaidObjective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([raidId, objectiveId, loggedAt])
+  @@map("raid_logs")
+}
+
+model Notification {
+  id               String             @id @default(uuid()) @db.Uuid
+  userId           String             @map("user_id") @db.Uuid
+  notificationType NotificationType   @map("notification_type")
+  status           NotificationStatus @default(pending)
+  title            String
+  body             String
+  systemDay        DateTime?          @map("system_day") @db.Date
+  eventId          String?            @map("event_id") @db.Uuid
+  scheduledFor     DateTime           @map("scheduled_for") @db.Timestamptz(6)
+  deliveredAt      DateTime?          @map("delivered_at") @db.Timestamptz(6)
+  dismissedAt      DateTime?          @map("dismissed_at") @db.Timestamptz(6)
+  metadata         Json               @default("{}")
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event            Event?             @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, notificationType, systemDay])
+  @@unique([userId, notificationType, eventId])
+  @@index([userId, status, scheduledFor])
+  @@map("notifications")
+}
+
+model GuideMessage {
+  id                  String             @id @default(uuid()) @db.Uuid
+  userId              String             @map("user_id") @db.Uuid
+  screen              GuideScreen
+  messageType         GuideMessageType   @map("message_type")
+  triggerType         String             @map("trigger_type")
+  triggerKey          String             @map("trigger_key")
+  priority            Int                @default(0)
+  stateVariant        GuideStateVariant  @map("state_variant")
+  title               String
+  body                String
+  status              GuideMessageStatus @default(active)
+  systemDay           DateTime           @map("system_day") @db.Date
+  sourceAiGenerationId String?           @map("source_ai_generation_id") @db.Uuid
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  shownAt             DateTime?          @map("shown_at") @db.Timestamptz(6)
+  dismissedAt         DateTime?          @map("dismissed_at") @db.Timestamptz(6)
+  expiresAt           DateTime?          @map("expires_at") @db.Timestamptz(6)
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceAiGeneration  AiGeneration?      @relation(fields: [sourceAiGenerationId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, triggerKey])
+  @@index([userId, status, priority, createdAt])
+  @@map("guide_messages")
+}
+
 model XpLedger {
   id            String          @id @default(uuid()) @db.Uuid
   userId        String          @map("user_id") @db.Uuid
   questId       String?         @map("quest_id") @db.Uuid
+  eventId       String?         @map("event_id") @db.Uuid
+  dungeonId     String?         @map("dungeon_id") @db.Uuid
+  raidId        String?         @map("raid_id") @db.Uuid
   source        XpLedgerSource
   deltaXp       Int             @map("delta_xp")
   totalXpAfter  Int             @map("total_xp_after")
@@ -287,6 +775,9 @@ model XpLedger {
   createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   quest         Quest?          @relation(fields: [questId], references: [id], onDelete: SetNull)
+  event         Event?          @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  dungeon       Dungeon?        @relation(fields: [dungeonId], references: [id], onDelete: SetNull)
+  raid          Raid?           @relation(fields: [raidId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@map("xp_ledger")
@@ -327,6 +818,7 @@ model AiGeneration {
   createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   quests            Quest[]
+  guideMessages     GuideMessage[]
 
   @@index([userId, createdAt])
   @@map("ai_generations")
@@ -336,6 +828,9 @@ model UserAttributeHistory {
   id             String         @id @default(uuid()) @db.Uuid
   userId         String         @map("user_id") @db.Uuid
   questId        String?        @map("quest_id") @db.Uuid
+  eventId        String?        @map("event_id") @db.Uuid
+  dungeonId      String?        @map("dungeon_id") @db.Uuid
+  raidId         String?        @map("raid_id") @db.Uuid
   attributeCode  AttributeCode  @map("attribute_code")
   delta          Decimal        @db.Decimal(6, 2)
   previousValue  Decimal        @map("previous_value") @db.Decimal(6, 2)
@@ -343,6 +838,9 @@ model UserAttributeHistory {
   createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   quest          Quest?         @relation(fields: [questId], references: [id], onDelete: SetNull)
+  event          Event?         @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  dungeon        Dungeon?       @relation(fields: [dungeonId], references: [id], onDelete: SetNull)
+  raid           Raid?          @relation(fields: [raidId], references: [id], onDelete: SetNull)
   attribute      Attribute      @relation(fields: [attributeCode], references: [code])
   userAttribute  UserAttribute  @relation(fields: [userId, attributeCode], references: [userId, attributeCode], onDelete: Cascade)
 
