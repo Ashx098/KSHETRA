@@ -110,17 +110,48 @@ export class GuideService {
     const prefs = await this.ensurePreferences(userId);
     await this.ensureScreenEntryNudge(userId, user.timezone, "missions", prefs);
 
+    const raidCompletionWindowRemainingHours = input.active_raid
+      ? Math.max(
+          Math.ceil(
+            (new Date(input.active_raid.started_at).getTime() +
+              input.active_raid.minimum_completion_window_hours * 60 * 60 * 1000 -
+              Date.now()) /
+              (60 * 60 * 1000),
+          ),
+          0,
+        )
+      : 0;
+    const raidCompletionWindowMet =
+      !input.active_raid || raidCompletionWindowRemainingHours === 0;
+
+    if (input.active_raid?.ready_for_verification && !raidCompletionWindowMet) {
+      await this.prisma.guideMessage.updateMany({
+        where: {
+          userId,
+          screen: "missions",
+          triggerType: "raid_ready_for_verification",
+          status: { in: ["active", "shown"] },
+        },
+        data: {
+          status: "expired",
+        },
+      });
+    }
+
     return {
       guide_card: {
         screen: "missions",
         companion_name: COMPANION_NAME,
-        state_variant: input.active_raid?.ready_for_verification
-          ? "battle"
-          : input.active_raid || input.active_dungeon
-            ? "bold"
-            : "calm",
+        state_variant:
+          input.active_raid?.ready_for_verification && raidCompletionWindowMet
+            ? "battle"
+            : input.active_raid || input.active_dungeon
+              ? "bold"
+              : "calm",
         title:
-          input.active_raid?.ready_for_verification
+          input.active_raid?.ready_for_verification && !raidCompletionWindowMet
+            ? "Verification cooling down"
+            : input.active_raid?.ready_for_verification
             ? "Finish the raid"
             : input.active_raid
               ? "The raid is live"
@@ -128,7 +159,9 @@ export class GuideService {
                 ? "Keep the dungeon moving"
                 : "Open a structured arc",
         body:
-          input.active_raid?.ready_for_verification
+          input.active_raid?.ready_for_verification && !raidCompletionWindowMet
+            ? `The objectives are closed, but the raid still needs ${raidCompletionWindowRemainingHours} more ${raidCompletionWindowRemainingHours === 1 ? "hour" : "hours"} before completion can be verified.`
+            : input.active_raid?.ready_for_verification
             ? "The objectives are closed. Write the summary cleanly and claim the full weight of the arc."
             : input.active_raid
               ? "Raids reward closure, not noise. Push the current objective, then respect the verification step."

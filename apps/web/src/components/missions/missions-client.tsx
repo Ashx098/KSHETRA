@@ -320,18 +320,21 @@ export function MissionsClient() {
         : activeDungeon
           ? "Advance the active dungeon"
           : "Start one structured challenge";
-  const raidReadyRemainingHours =
-    activeRaid && !activeRaid.ready_for_verification
-      ? Math.max(
-          Math.ceil(
-            (new Date(activeRaid.started_at).getTime() +
-              activeRaid.minimum_completion_window_hours * 60 * 60 * 1000 -
-              Date.now()) /
-              (60 * 60 * 1000),
-          ),
-          0,
-        )
-      : 0;
+  const raidCompletionWindowRemainingHours = activeRaid
+    ? Math.max(
+        Math.ceil(
+          (new Date(activeRaid.started_at).getTime() +
+            activeRaid.minimum_completion_window_hours * 60 * 60 * 1000 -
+            Date.now()) /
+            (60 * 60 * 1000),
+        ),
+        0,
+      )
+    : 0;
+  const raidCompletionWindowMet =
+    !activeRaid || raidCompletionWindowRemainingHours === 0;
+  const canCompleteRaid =
+    Boolean(activeRaid?.ready_for_verification) && raidCompletionWindowMet;
 
   return (
     <>
@@ -510,9 +513,9 @@ export function MissionsClient() {
               <MetricCard
                 label="Minimum window"
                 value={
-                  activeRaid.ready_for_verification
+                  raidCompletionWindowMet
                     ? `${activeRaid.minimum_completion_window_hours}h met`
-                    : `${raidReadyRemainingHours}h left`
+                    : `${raidCompletionWindowRemainingHours}h left`
                 }
               />
               <MetricCard label="Rank meaning" value="Soft only" />
@@ -524,6 +527,13 @@ export function MissionsClient() {
               </div>
             ) : null}
 
+            {activeRaid.ready_for_verification && !raidCompletionWindowMet ? (
+              <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/6 px-4 py-3 text-sm text-amber-100">
+                Objectives are closed, but the raid still needs {raidCompletionWindowRemainingHours} more hour
+                {raidCompletionWindowRemainingHours === 1 ? "" : "s"} before completion can be verified.
+              </div>
+            ) : null}
+
             <div className="mt-5">
               <button
                 type="button"
@@ -531,7 +541,7 @@ export function MissionsClient() {
                 onClick={() => {
                   void handleCompleteRaid();
                 }}
-                disabled={submitting || !activeRaid.ready_for_verification}
+                disabled={submitting || !canCompleteRaid}
               >
                 {submitting ? "Verifying..." : "Complete Raid"}
               </button>

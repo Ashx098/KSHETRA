@@ -156,8 +156,8 @@ const questTemplateSeeds = [
   },
   {
     code: "journal_and_integrate",
-    title: "Journal and Integrate",
-    description: "Write a short honest journal entry that closes one open loop.",
+    title: "Journal One Open Loop",
+    description: "Write 3-5 honest lines about one unfinished thought, decision, or worry, then name the next step.",
     questCategory: "daily",
     questType: "daily",
     assignmentKind: "mandatory",
